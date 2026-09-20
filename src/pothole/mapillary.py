@@ -25,7 +25,9 @@ class MapillaryError(RuntimeError):
 def _token() -> str:
     tok = os.environ.get("MAPILLARY_TOKEN")
     if not tok:
-        raise MapillaryError("Set MAPILLARY_TOKEN (create an app at mapillary.com/dashboard/developers).")
+        raise MapillaryError(
+            "Set MAPILLARY_TOKEN (create an app at mapillary.com/dashboard/developers)."
+        )
     return tok
 
 

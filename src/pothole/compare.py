@@ -147,6 +147,7 @@ def compare_periods(
     for c in base:
         if cur_grid.near(c.lat, c.lon, match_radius_m):
             continue  # already reported as persistent
-        status = Status.FIXED if cur_cov.near(c.lat, c.lon, coverage_radius_m) else Status.UNCONFIRMED
+        seen_now = cur_cov.near(c.lat, c.lon, coverage_radius_m)
+        status = Status.FIXED if seen_now else Status.UNCONFIRMED
         out.append(PotholeStatus(c.lat, c.lon, status, c.conf, c.hits))
     return out

@@ -69,7 +69,9 @@ def interpolate_polyline(polyline: Sequence[LatLon], step_m: float) -> list[LatL
     return out
 
 
-def corridor_tiles(polyline: Sequence[LatLon], tile_deg: float = 0.01, step_m: float = 250) -> list[BBox]:
+def corridor_tiles(
+    polyline: Sequence[LatLon], tile_deg: float = 0.01, step_m: float = 250
+) -> list[BBox]:
     """Grid-aligned bounding boxes covering the corridor (Mapillary limits bbox size)."""
     cells = {
         (math.floor(lat / tile_deg), math.floor(lon / tile_deg))
