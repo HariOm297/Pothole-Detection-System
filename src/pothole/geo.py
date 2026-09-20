@@ -88,6 +88,55 @@ def corridor_tiles(
     ]
 
 
+def point_in_polygon(lat: float, lon: float, polygon: Sequence[LatLon]) -> bool:
+    """Ray-casting point-in-polygon test (polygon given as (lat, lon) vertices)."""
+    inside = False
+    j = len(polygon) - 1
+    for i in range(len(polygon)):
+        yi, xi = polygon[i]
+        yj, xj = polygon[j]
+        if (yi > lat) != (yj > lat) and lon < (xj - xi) * (lat - yi) / (yj - yi) + xi:
+            inside = not inside
+        j = i
+    return inside
+
+
+def polygon_bbox(polygon: Sequence[LatLon]) -> BBox:
+    lats = [p[0] for p in polygon]
+    lons = [p[1] for p in polygon]
+    return min(lons), min(lats), max(lons), max(lats)
+
+
+def _tile_touches_polygon(tile: BBox, polygon: Sequence[LatLon], samples: int) -> bool:
+    min_lon, min_lat, max_lon, max_lat = tile
+    if any(min_lat <= la <= max_lat and min_lon <= lo <= max_lon for la, lo in polygon):
+        return True
+    for a in range(samples):
+        for b in range(samples):
+            la = min_lat + (max_lat - min_lat) * a / (samples - 1)
+            lo = min_lon + (max_lon - min_lon) * b / (samples - 1)
+            if point_in_polygon(la, lo, polygon):
+                return True
+    return False
+
+
+def area_tiles(
+    polygon: Sequence[LatLon], tile_deg: float = 0.01, samples: int = 5
+) -> list[BBox]:
+    """Grid-aligned tiles that overlap the polygon (approximate: thin slivers may be missed)."""
+    min_lon, min_lat, max_lon, max_lat = polygon_bbox(polygon)
+    i0, j0 = math.floor(min_lat / tile_deg + 1e-9), math.floor(min_lon / tile_deg + 1e-9)
+    i1 = max(i0, math.ceil(max_lat / tile_deg - 1e-9) - 1)
+    j1 = max(j0, math.ceil(max_lon / tile_deg - 1e-9) - 1)
+    tiles = []
+    for i in range(i0, i1 + 1):
+        for j in range(j0, j1 + 1):
+            tile = (j * tile_deg, i * tile_deg, (j + 1) * tile_deg, (i + 1) * tile_deg)
+            if _tile_touches_polygon(tile, polygon, samples):
+                tiles.append(tuple(round(v, 6) for v in tile))
+    return tiles
+
+
 def split_bbox(b: BBox) -> list[BBox]:
     min_lon, min_lat, max_lon, max_lat = b
     mid_lon, mid_lat = (min_lon + max_lon) / 2, (min_lat + max_lat) / 2

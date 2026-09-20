@@ -1,9 +1,11 @@
 from pothole.geo import (
+    area_tiles,
     corridor_tiles,
     distance_to_polyline_m,
     haversine_m,
     interpolate_polyline,
     offset_point,
+    point_in_polygon,
     split_bbox,
 )
 
@@ -67,3 +69,33 @@ def test_split_bbox_quadrants():
     parts = split_bbox((0.0, 0.0, 2.0, 2.0))
     assert len(parts) == 4
     assert (1.0, 1.0, 2.0, 2.0) in parts
+
+
+SQUARE = [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)]
+# L-shape: the top-right quadrant is missing
+L_SHAPE = [(0.0, 0.0), (0.0, 2.0), (1.0, 2.0), (1.0, 1.0), (2.0, 1.0), (2.0, 0.0)]
+
+
+def test_point_in_polygon_square():
+    assert point_in_polygon(0.5, 0.5, SQUARE)
+    assert not point_in_polygon(1.5, 0.5, SQUARE)
+    assert not point_in_polygon(0.5, -0.1, SQUARE)
+
+
+def test_point_in_polygon_concave():
+    assert point_in_polygon(0.5, 1.5, L_SHAPE)
+    assert point_in_polygon(1.5, 0.5, L_SHAPE)
+    assert not point_in_polygon(1.5, 1.5, L_SHAPE)
+
+
+def test_area_tiles_rectangle_full_grid():
+    tiles = area_tiles(SQUARE, tile_deg=0.25)
+    assert len(tiles) == 16
+    assert len(set(tiles)) == 16
+
+
+def test_area_tiles_skip_empty_corner_of_concave_polygon():
+    tiles = area_tiles(L_SHAPE, tile_deg=0.5)
+    centres = {((t[0] + t[2]) / 2, (t[1] + t[3]) / 2) for t in tiles}
+    assert (1.75, 1.75) not in centres  # inside the missing quadrant
+    assert (0.25, 0.25) in centres
