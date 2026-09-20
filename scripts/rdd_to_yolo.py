@@ -65,7 +65,7 @@ def main() -> None:
     negatives = negatives[: int(len(positives) * args.max_bg_ratio)]
     samples = positives + negatives
     rng.shuffle(samples)
-    n_val = int(len(samples) * args.val_frac)
+    n_val = max(1, int(len(samples) * args.val_frac)) if len(samples) > 1 else 0
     splits = {"val": samples[:n_val], "train": samples[n_val:]}
 
     for split, items in splits.items():
