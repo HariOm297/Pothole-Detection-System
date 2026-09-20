@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pothole-monitor"
+version = "0.1.0"
+description = "Road-health monitoring for the Panipat-Karnal stretch: YOLOv8 pothole detection on Mapillary imagery with new/fixed tracking over time."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31",
+    "pyyaml>=6.0",
+    "folium>=0.15",
+]
+
+[project.optional-dependencies]
+ml = ["ultralytics>=8.2"]
+app = ["streamlit>=1.35", "streamlit-folium>=0.20"]
+dev = ["pytest>=8", "ruff>=0.5"]
+
+[project.scripts]
+pothole = "pothole.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

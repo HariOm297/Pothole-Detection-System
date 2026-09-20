@@ -1,0 +1,29 @@
+corridor:
+  name: "Panipat - Karnal (NH-44 / GT Road)"
+  # Approximate waypoints (lat, lon). For a precise corridor, export the road as a
+  # LineString GeoJSON (OSM / geojson.io) and put it at the path below.
+  waypoints:
+    - [29.3909, 76.9635]   # Panipat
+    - [29.5375, 76.9727]   # Gharaunda
+    - [29.6857, 76.9905]   # Karnal
+  geojson: data/corridor.geojson   # optional, used only if the file exists
+  buffer_m: 250            # keep only images within this distance of the corridor
+  tile_deg: 0.01           # Mapillary query tile size (~1 km)
+
+paths:
+  db: data/pothole.db
+  images: data/images
+  outputs: outputs
+
+detection:
+  weights: models/best.pt
+  conf: 0.35
+  imgsz: 640
+  min_y_frac: 0.45         # ignore boxes centred in the top of the frame (too far away)
+  offset_m: 6              # pothole assumed this far ahead of the camera, along its heading
+
+compare:
+  cluster_radius_m: 8      # detections closer than this are the same pothole
+  match_radius_m: 12       # baseline vs current match distance
+  coverage_radius_m: 15    # "we had imagery here" distance
+  min_hits: 2              # detections needed to trust a pothole
