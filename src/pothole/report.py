@@ -9,7 +9,7 @@ from pathlib import Path
 import folium
 
 from .compare import PotholeStatus, Status
-from .geo import LatLon
+from .config import Area
 
 COLORS = {
     Status.NEW: "#d62728",
@@ -44,13 +44,14 @@ def to_geojson(statuses: Sequence[PotholeStatus]) -> dict:
     }
 
 
-def make_map(statuses: Sequence[PotholeStatus], corridor: Sequence[LatLon]) -> folium.Map:
-    centre = (
-        sum(p[0] for p in corridor) / len(corridor),
-        sum(p[1] for p in corridor) / len(corridor),
-    )
-    m = folium.Map(location=centre, zoom_start=11, tiles="OpenStreetMap")
-    folium.PolyLine(list(corridor), color="#1f77b4", weight=3, opacity=0.5).add_to(m)
+def make_map(statuses: Sequence[PotholeStatus], area: Area) -> folium.Map:
+    m = folium.Map(location=area.centre(), zoom_start=13, tiles="OpenStreetMap")
+    for poly in area.polygons:
+        folium.Polygon(
+            poly, color="#1f77b4", weight=2, fill=True, fill_opacity=0.04
+        ).add_to(m)
+    if area.highway:
+        folium.PolyLine(area.highway, color="#1f77b4", weight=3, opacity=0.5).add_to(m)
     for s in statuses:
         folium.CircleMarker(
             (s.lat, s.lon),
@@ -64,10 +65,8 @@ def make_map(statuses: Sequence[PotholeStatus], corridor: Sequence[LatLon]) -> f
     return m
 
 
-def save_outputs(
-    statuses: Sequence[PotholeStatus], corridor: Sequence[LatLon], out_dir: str
-) -> None:
+def save_outputs(statuses: Sequence[PotholeStatus], area: Area, out_dir: str) -> None:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     (out / "potholes.geojson").write_text(json.dumps(to_geojson(statuses)))
-    make_map(statuses, corridor).save(str(out / "map.html"))
+    make_map(statuses, area).save(str(out / "map.html"))

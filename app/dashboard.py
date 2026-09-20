@@ -10,15 +10,15 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 from pothole.analysis import run_analysis
-from pothole.config import load_config, load_corridor
+from pothole.config import load_area, load_config
 from pothole.db import connect, date_range
 from pothole.report import make_map
 
-st.set_page_config(page_title="Panipat-Karnal Road Monitor", layout="wide")
+st.set_page_config(page_title="Panipat Pothole Monitor", layout="wide")
 cfg = load_config(os.environ.get("POTHOLE_CONFIG", "config.yaml"))
 conn = connect(cfg["paths"]["db"])
 
-st.title("Panipat - Karnal road health")
+st.title("Panipat pothole monitor")
 rng = date_range(conn)
 if rng is None:
     st.info("No processed images yet. Run `pothole fetch --download` then `pothole detect`.")
@@ -41,7 +41,7 @@ cols = st.columns(4)
 for col, key in zip(cols, ["new", "persistent", "fixed", "unconfirmed"], strict=True):
     col.metric(key.capitalize(), counts.get(key, 0))
 
-st_folium(make_map(statuses, load_corridor(cfg)), width=None, height=650, returned_objects=[])
+st_folium(make_map(statuses, load_area(cfg)), width=None, height=650, returned_objects=[])
 st.caption(
     "Fixed = not detected in newer imagery of the same spot (a candidate, not a confirmed repair). "
     "Unconfirmed = no imagery of that spot in the other period."

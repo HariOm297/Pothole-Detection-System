@@ -1,14 +1,13 @@
-corridor:
-  name: "Panipat - Karnal (NH-44 / GT Road)"
-  # Approximate waypoints (lat, lon). For a precise corridor, export the road as a
-  # LineString GeoJSON (OSM / geojson.io) and put it at the path below.
-  waypoints:
-    - [29.3909, 76.9635]   # Panipat
-    - [29.5375, 76.9727]   # Gharaunda
-    - [29.6857, 76.9905]   # Karnal
-  geojson: data/corridor.geojson   # optional, used only if the file exists
-  buffer_m: 250            # keep only images within this distance of the corridor
-  tile_deg: 0.01           # Mapillary query tile size (~1 km)
+area:
+  name: "Panipat city"
+  # Generous bounding box around the city: [min_lat, min_lon, max_lat, max_lon].
+  # It includes the NH-44 stretch that runs through the city. Approximate: it also covers
+  # some outskirts. For an exact boundary, draw a polygon at geojson.io and save it below.
+  bbox: [29.34, 76.92, 29.44, 77.02]
+  polygon_geojson: data/area.geojson       # optional Polygon(s); used instead of bbox if present
+  highway_geojson: data/highway.geojson    # optional LineString: NH-44 beyond the polygon
+  highway_buffer_m: 100
+  tile_deg: 0.01                           # Mapillary query tile (~1 km); auto-splits if crowded
 
 paths:
   db: data/pothole.db
@@ -20,10 +19,10 @@ detection:
   conf: 0.35
   imgsz: 640
   min_y_frac: 0.45         # ignore boxes centred in the top of the frame (too far away)
-  offset_m: 6              # pothole assumed this far ahead of the camera, along its heading
+  offset_m: 5              # pothole assumed this far ahead of the camera (narrow lanes: closer)
 
 compare:
   cluster_radius_m: 8      # detections closer than this are the same pothole
   match_radius_m: 12       # baseline vs current match distance
   coverage_radius_m: 15    # "we had imagery here" distance
-  min_hits: 2              # detections needed to trust a pothole
+  min_hits: 2              # detections needed to trust a pothole (use 1 if lanes have sparse imagery)

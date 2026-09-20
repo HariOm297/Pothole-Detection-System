@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pothole-monitor"
 version = "0.1.0"
-description = "Road-health monitoring for the Panipat-Karnal stretch: YOLOv8 pothole detection on Mapillary imagery with new/fixed tracking over time."
+description = "Pothole detection and tracking for Panipat city (inner streets and NH-44): YOLOv8 on Mapillary imagery with new/fixed tracking over time."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

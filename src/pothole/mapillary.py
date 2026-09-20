@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import os
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import requests
 
-from .geo import BBox, LatLon, distance_to_polyline_m, split_bbox
+from .geo import BBox, split_bbox
 
 API = "https://graph.mapillary.com/images"
 FIELDS = "id,captured_at,compass_angle,geometry,is_pano,thumb_1024_url"
@@ -85,10 +85,9 @@ def to_row(item: dict) -> dict | None:
     }
 
 
-def fetch_corridor(
+def fetch_area(
     tiles: Sequence[BBox],
-    polyline: Sequence[LatLon],
-    buffer_m: float,
+    keep: Callable[[float, float], bool],
     start: str | None = None,
     end: str | None = None,
     progress=print,
@@ -99,7 +98,7 @@ def fetch_corridor(
             row = to_row(item)
             if row is None:
                 continue
-            if distance_to_polyline_m(row["lat"], row["lon"], polyline) <= buffer_m:
+            if keep(row["lat"], row["lon"]):
                 rows[row["id"]] = row
         progress(f"tile {n}/{len(tiles)}: {len(rows)} images kept so far")
     return list(rows.values())

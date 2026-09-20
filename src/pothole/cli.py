@@ -9,8 +9,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .analysis import run_analysis
-from .config import load_config, load_corridor
+from .config import load_area, load_config
+from .coverage import coverage_stats
 from .db import (
+    all_image_points,
     connect,
     images_to_download,
     images_to_process,
@@ -18,7 +20,6 @@ from .db import (
     set_image_path,
     upsert_images,
 )
-from .geo import corridor_tiles
 
 
 def _iso(day: str | None) -> str | None:
@@ -26,14 +27,13 @@ def _iso(day: str | None) -> str | None:
 
 
 def cmd_fetch(args, cfg) -> None:
-    from .mapillary import download_image, fetch_corridor
+    from .mapillary import download_image, fetch_area
 
-    corridor = load_corridor(cfg)
-    c = cfg["corridor"]
-    tiles = corridor_tiles(corridor, c["tile_deg"])
-    print(f"Corridor covered by {len(tiles)} tiles")
+    area = load_area(cfg)
+    tiles = area.tiles()
+    print(f"{area.name}: {len(tiles)} tiles to query")
     conn = connect(cfg["paths"]["db"])
-    rows = fetch_corridor(tiles, corridor, c["buffer_m"], _iso(args.start), _iso(args.end))
+    rows = fetch_area(tiles, area.contains, _iso(args.start), _iso(args.end))
     upsert_images(conn, rows)
     print(f"{len(rows)} images stored in {cfg['paths']['db']}")
     if not args.download:
@@ -83,8 +83,26 @@ def cmd_analyze(args, cfg) -> None:
     statuses = run_analysis(conn, int(split.timestamp() * 1000), cfg)
     counts = Counter(s.status.value for s in statuses)
     print(f"Baseline = before {args.split}, current = on/after. Results: {dict(counts)}")
-    save_outputs(statuses, load_corridor(cfg), cfg["paths"]["outputs"])
+    save_outputs(statuses, load_area(cfg), cfg["paths"]["outputs"])
     print(f"Wrote {cfg['paths']['outputs']}/map.html and potholes.geojson")
+
+
+def cmd_coverage(args, cfg) -> None:
+    area = load_area(cfg)
+    conn = connect(cfg["paths"]["db"])
+    rows = all_image_points(conn)
+    conn.close()
+    if not rows:
+        print("No images in the database yet. Run `pothole fetch` first.")
+        return
+    by_year: dict[int, list[tuple[float, float]]] = {}
+    for r in rows:
+        year = datetime.fromtimestamp(r["captured_at"] / 1000, tz=timezone.utc).year
+        by_year.setdefault(year, []).append((r["lat"], r["lon"]))
+    everything = coverage_stats([(r["lat"], r["lon"]) for r in rows], area, args.cell)
+    print(f"{area.name}, {args.cell:.0f} m cells - all years: {everything}")
+    for year in sorted(by_year):
+        print(f"  {year}: {coverage_stats(by_year[year], area, args.cell)}")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -92,7 +110,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--config", default="config.yaml")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    f = sub.add_parser("fetch", help="get Mapillary image metadata for the corridor")
+    f = sub.add_parser("fetch", help="get Mapillary image metadata for the study area")
     f.add_argument("--start", help="YYYY-MM-DD, only images captured after")
     f.add_argument("--end", help="YYYY-MM-DD, only images captured before")
     f.add_argument("--download", action="store_true", help="also download thumbnails")
@@ -101,6 +119,10 @@ def main(argv: list[str] | None = None) -> None:
     d = sub.add_parser("detect", help="run YOLO on downloaded images")
     d.add_argument("--limit", type=int)
     d.set_defaults(func=cmd_detect)
+
+    c = sub.add_parser("coverage", help="how much of the city has imagery, per year")
+    c.add_argument("--cell", type=float, default=100.0, help="cell size in metres")
+    c.set_defaults(func=cmd_coverage)
 
     a = sub.add_parser("analyze", help="classify potholes as new/persistent/fixed and build map")
     a.add_argument("--split", required=True, help="YYYY-MM-DD: before = baseline, after = current")

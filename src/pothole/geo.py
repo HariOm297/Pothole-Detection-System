@@ -33,7 +33,7 @@ def offset_point(lat: float, lon: float, bearing_deg: float, dist_m: float) -> L
 
 
 def to_xy(lat: float, lon: float, lat0: float) -> tuple[float, float]:
-    """Local equirectangular projection to metres (fine for a ~50 km corridor)."""
+    """Local equirectangular projection to metres (fine at city scale)."""
     x = math.radians(lon) * EARTH_R * math.cos(math.radians(lat0))
     y = math.radians(lat) * EARTH_R
     return x, y
@@ -72,7 +72,7 @@ def interpolate_polyline(polyline: Sequence[LatLon], step_m: float) -> list[LatL
 def corridor_tiles(
     polyline: Sequence[LatLon], tile_deg: float = 0.01, step_m: float = 250
 ) -> list[BBox]:
-    """Grid-aligned bounding boxes covering the corridor (Mapillary limits bbox size)."""
+    """Grid-aligned bounding boxes along a road line (Mapillary limits bbox size)."""
     cells = {
         (math.floor(lat / tile_deg), math.floor(lon / tile_deg))
         for lat, lon in interpolate_polyline(polyline, step_m)

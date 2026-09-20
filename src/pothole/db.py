@@ -97,6 +97,11 @@ def load_coverage(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     return conn.execute("SELECT lat, lon, captured_at FROM images WHERE processed = 1").fetchall()
 
 
+def all_image_points(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Every known image (downloaded or not): lat, lon, captured_at."""
+    return conn.execute("SELECT lat, lon, captured_at FROM images").fetchall()
+
+
 def date_range(conn: sqlite3.Connection) -> tuple[int, int] | None:
     row = conn.execute(
         "SELECT MIN(captured_at) AS lo, MAX(captured_at) AS hi FROM images WHERE processed = 1"
