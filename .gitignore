@@ -12,4 +12,5 @@ data/yolo/
 data/images/
 data/*.db
 models/*.pt
+*.pt
 .ipynb_checkpoints/

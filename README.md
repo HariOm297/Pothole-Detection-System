@@ -1,4 +1,6 @@
-# pothole-monitor
+# Pothole-Detection-System
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/HariOm297/Pothole-Detection-System/blob/main/notebooks/train_colab.ipynb)
 
 Pothole detection and tracking for **Panipat city** - inner streets and the NH-44 highway stretch.
 A YOLOv8 model finds potholes in street-level imagery; detections are geo-tagged and compared
@@ -49,20 +51,24 @@ through the city. To tighten it:
 
 1. Draw the city boundary at [geojson.io](https://geojson.io) and save it as `data/area.geojson`
    (one or more polygons).
-2. If you also want NH-44 beyond that boundary, draw it as a line and save `data/highway.geojson`
-   (images within `highway_buffer_m` of the line are kept).
+2. `data/highway.geojson` is already included: 11 continuous stretches of NH-44 (55 km, OSM
+   ODbL) that carry the study area north and south of the city bbox - images within
+   `highway_buffer_m` of a line are kept. If you draw your own (geojson.io), several separate
+   lines are fine: each LineString is treated as its own stretch of road.
 
 ## Quick start
 
 ```bash
-git clone https://github.com/<you>/pothole-monitor && cd pothole-monitor
+git clone https://github.com/HariOm297/Pothole-Detection-System && cd Pothole-Detection-System
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[ml,app,dev]"
 pytest -q
 
 # 1. Train (Colab GPU): open notebooks/train_colab.ipynb   ->  models/best.pt
-#    or locally:
-python scripts/rdd_to_yolo.py --src data/raw/India --out data/yolo
+#    or locally (downloads the RDD2022 India subset, ~500 MB, from a Kaggle mirror):
+pip install kagglehub
+python -c "import kagglehub; print(kagglehub.dataset_download('musfequa/india-road-damage'))"
+python scripts/rdd_to_yolo.py --src <printed path>/India --out data/yolo   # -> 1530 pothole images
 python scripts/train.py
 
 # 2. Get imagery for the city (free Mapillary token) and check what you actually have
@@ -76,7 +82,7 @@ pothole analyze --split 2024-06-01      # before = baseline, on/after = current
 streamlit run app/dashboard.py
 ```
 
-Docker (dashboard only): `docker build -t pothole-monitor . && docker run -p 8501:8501 -v $(pwd)/data:/app/data pothole-monitor`
+Docker (dashboard only): `docker build -t pothole-detection . && docker run -p 8501:8501 -v $(pwd)/data:/app/data pothole-detection`
 
 ## Repo layout
 
@@ -90,11 +96,19 @@ tests/         geo, area, compare, db, converter tests (run in CI, no GPU needed
 config.yaml    study area, detection and comparison settings
 ```
 
+## Training data
+
+[RDD2022](https://doi.org/10.6084/m9.figshare.21431547) (Arya et al., 2022), **India subset only**:
+7,706 annotated images, of which 1,530 contain potholes (class `D40`, 3,187 boxes). The
+converter keeps those 1,530 plus 10% background images and splits 85/15 into train/val.
+The official `RDD2022_India.zip` link now returns 403, so the notebook pulls the identical
+Kaggle mirror `musfequa/india-road-damage` (no Kaggle account needed via `kagglehub`).
+
 ## Results
 
-| Model | Data | Precision | Recall | mAP@0.5 |
-|---|---|---|---|---|
-| YOLOv8s | RDD2022 India (potholes only) | TBD | TBD | TBD |
+| Model | Data | Precision | Recall | mAP@0.5 | mAP@0.5:0.95 |
+|---|---|---|---|---|---|
+| YOLOv8s, 60 epochs, 640px | RDD2022 India, potholes only (1431 train / 252 val) | TBD | TBD | TBD | TBD |
 
 Fill this in after training, together with a few failure-case images.
 

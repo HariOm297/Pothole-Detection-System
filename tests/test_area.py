@@ -66,3 +66,18 @@ def test_coverage_stats_counts_cells():
 
     outside = coverage_stats([(29.5, 77.0)], area, cell_m=100)
     assert outside["images_in_area"] == 0
+
+
+def test_multilinestring_highway_keeps_lines_separate(tmp_path):
+    """Two separate road stretches must not be joined into a phantom segment."""
+    hw = {"type": "MultiLineString", "coordinates": [
+        [[76.96, 29.45], [76.96, 29.46]],   # stretch A
+        [[77.00, 29.45], [77.00, 29.46]],   # stretch B, 4 km east
+    ]}
+    f = tmp_path / "hw.geojson"
+    f.write_text(json.dumps(hw))
+    cfg = {"area": {**BASE_CFG["area"], "highway_geojson": str(f), "highway_buffer_m": 100}}
+    area = load_area(cfg)
+    assert area.contains(29.455, 76.96)      # on stretch A
+    assert area.contains(29.455, 77.00)      # on stretch B
+    assert not area.contains(29.455, 76.98)  # between them: no road here

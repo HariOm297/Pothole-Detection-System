@@ -50,8 +50,8 @@ def make_map(statuses: Sequence[PotholeStatus], area: Area) -> folium.Map:
         folium.Polygon(
             poly, color="#1f77b4", weight=2, fill=True, fill_opacity=0.04
         ).add_to(m)
-    if area.highway:
-        folium.PolyLine(area.highway, color="#1f77b4", weight=3, opacity=0.5).add_to(m)
+    for line in area.highway or []:
+        folium.PolyLine(line, color="#1f77b4", weight=3, opacity=0.5).add_to(m)
     for s in statuses:
         folium.CircleMarker(
             (s.lat, s.lon),

@@ -23,17 +23,18 @@ def load_config(path: str | Path = "config.yaml") -> dict:
         return yaml.safe_load(f)
 
 
-def _find_geometry(obj: dict, kinds: tuple[str, ...]) -> dict | None:
+def _all_geometries(obj: dict, kinds: tuple[str, ...]) -> list[dict]:
+    """Every geometry of the given kinds found in a GeoJSON object, in file order."""
+    found: list[dict] = []
     kind = obj.get("type")
     if kind == "FeatureCollection":
         for feat in obj["features"]:
-            found = _find_geometry(feat, kinds)
-            if found is not None:
-                return found
-        return None
-    if kind == "Feature":
-        return _find_geometry(obj["geometry"], kinds)
-    return obj if kind in kinds else None
+            found += _all_geometries(feat, kinds)
+    elif kind == "Feature":
+        found += _all_geometries(obj["geometry"], kinds)
+    elif kind in kinds:
+        found.append(obj)
+    return found
 
 
 def _polygons_from_geojson(obj: dict) -> list[list[LatLon]]:
@@ -59,23 +60,34 @@ def _polygons_from_geojson(obj: dict) -> list[list[LatLon]]:
     return rings
 
 
-def _line_from_geojson(obj: dict) -> list[LatLon]:
-    geom = _find_geometry(obj, ("LineString", "MultiLineString"))
-    if geom is None:
+def _lines_from_geojson(obj: dict) -> list[list[LatLon]]:
+    """All line strings in a GeoJSON file, each kept as its own (lat, lon) list.
+
+    A MultiLineString (or several LineStrings) describes *separate* stretches of road:
+    joining them into one polyline would invent road segments between the line ends and
+    those phantom segments would then be counted as covered area.
+    """
+    lines: list[list[LatLon]] = []
+    for geom in _all_geometries(obj, ("LineString", "MultiLineString")):
+        parts = geom["coordinates"]
+        if geom["type"] == "LineString":
+            parts = [parts]
+        for part in parts:
+            pts = [(lat, lon) for lon, lat in part]
+            if len(pts) >= 2:
+                lines.append(pts)
+    if not lines:
         raise ValueError("No LineString found in GeoJSON")
-    coords = geom["coordinates"]
-    if geom["type"] == "MultiLineString":
-        coords = [pt for line in coords for pt in line]
-    return [(lat, lon) for lon, lat in coords]
+    return lines
 
 
 @dataclass(frozen=True)
 class Area:
-    """Study area: one or more polygons, plus an optional highway line with a buffer."""
+    """Study area: one or more polygons, plus optional highway lines with a buffer."""
 
     name: str
     polygons: list[list[LatLon]]
-    highway: list[LatLon] | None = None
+    highway: list[list[LatLon]] | None = None
     highway_buffer_m: float = 100.0
     tile_deg: float = 0.01
 
@@ -83,15 +95,18 @@ class Area:
         if any(point_in_polygon(lat, lon, poly) for poly in self.polygons):
             return True
         if self.highway:
-            return distance_to_polyline_m(lat, lon, self.highway) <= self.highway_buffer_m
+            return any(
+                distance_to_polyline_m(lat, lon, line) <= self.highway_buffer_m
+                for line in self.highway
+            )
         return False
 
     def tiles(self) -> list[BBox]:
         tiles: set[BBox] = set()
         for poly in self.polygons:
             tiles.update(area_tiles(poly, self.tile_deg))
-        if self.highway:
-            tiles.update(corridor_tiles(self.highway, self.tile_deg))
+        for line in self.highway or []:
+            tiles.update(corridor_tiles(line, self.tile_deg))
         return sorted(tiles)
 
     def centre(self) -> LatLon:
@@ -115,7 +130,7 @@ def load_area(cfg: dict) -> Area:
     hw_file = a.get("highway_geojson")
     if hw_file and Path(hw_file).exists():
         with open(hw_file, encoding="utf-8") as f:
-            highway = _line_from_geojson(json.load(f))
+            highway = _lines_from_geojson(json.load(f))
 
     return Area(
         name=a.get("name", "study area"),

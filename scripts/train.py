@@ -26,6 +26,7 @@ def main() -> None:
         project="runs", name=args.name, device=args.device,
         hsv_v=0.5, degrees=3.0, translate=0.1, scale=0.5, mosaic=1.0,
     )
+    print(f"run dir: {model.trainer.save_dir}")
     m = model.val()
     print(f"precision={m.box.mp:.3f} recall={m.box.mr:.3f} "
           f"mAP50={m.box.map50:.3f} mAP50-95={m.box.map:.3f}")
