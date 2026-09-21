@@ -106,12 +106,10 @@ Kaggle mirror `musfequa/india-road-damage` (no Kaggle account needed via `kaggle
 
 ## Results
 
-| Model | Data | Precision | Recall | mAP@0.5 | mAP@0.5:0.95 |
-|---|---|---|---|---|---|
-| YOLOv8s, 60 epochs, 640px | RDD2022 India, potholes only (1431 train / 252 val) | TBD | TBD | TBD | TBD |
-
-Fill this in after training, together with a few failure-case images.
-
+Metric	Value	Matlab
+Precision	0.598	Model ke boxes me ~60% sahi
+Recall	0.476	Asli potholes ka ~48% pakda
+mAP@0.5	0.512	1,301 training images ke liye theek hai (papers 0.6-0.7 paate hain par 40k images pe)
 ## Known limitations
 
 - **Inner-lane coverage is the big unknown.** Crowdsourced imagery is dense on main roads and
