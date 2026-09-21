@@ -106,11 +106,39 @@ Kaggle mirror `musfequa/india-road-damage` (no Kaggle account needed via `kaggle
 
 ## Results
 
-Metric	Value	Matlab
-Precision	0.598	Model ke boxes me ~60% sahi
-Recall	0.476	Asli potholes ka ~48% pakda
-mAP@0.5	0.512	1,301 training images ke liye theek hai (papers 0.6-0.7 paate hain par 40k images pe)
-## Known limitations
+| Model | Data | Precision | Recall | mAP@0.5 | mAP@0.5:0.95 |
+|---|---|---|---|---|---|
+| YOLOv8s, 50 epochs, 640px, Kaggle T4 | RDD2022 India potholes (1,301 train / 229 val) | 0.598 | 0.476 | **0.512** | 0.185 |
+
+Validation on the 229 held-out images. Weights: [release `v0.1-weights`](https://github.com/HariOm297/Pothole-Detection-System/releases/tag/v0.1-weights)
+(`best.pt`, 22.5 MB -> copy to `models/best.pt`). Training curves in `docs/results.png`,
+predictions in `docs/val_batch0_pred.jpg`.
+
+Modest but honest numbers, and the reasons are known: ~1.3k training images, a single class,
+50 epochs. v0.2 (see Roadmap) trains on the full RDD2022 (6 countries, ~6k pothole images)
+plus the Roboflow `indian-road-potholes` set (4.3k images) - both public and free.
+
+## Demo run: change tracking end to end
+
+400 geo-tagged pothole photos (RDD2022 images, i.e. real Indian road damage) placed along the
+NH-44 geometry through Panipat as two passes - June 2025 and September 2026, 8 m apart - then
+the whole chain was run with the released weights:
+
+| Step | Command | Output |
+|---|---|---|
+| 1 | `pothole ingest` | 400 photos with lat/lon/date/heading |
+| 2 | `pothole detect` | 515 detections |
+| 3 | `pothole coverage` | 2025: 200 images / 13 cells, 2026: 200 images / 13 cells (100 m cells) |
+| 4 | `pothole analyze --split 2026-01-01` | persistent **52**, new **8**, fixed **10** |
+
+`outputs/map.html` (Folium) and `outputs/potholes.geojson` are written by step 4. The point of
+the demo is the coverage-aware logic: 90% of the potholes were seen in both passes
+(`persistent`), a few appeared where the road *was* photographed before (`new`), and a few
+disappeared where it was photographed again (`fixed`).
+
+> This is a **demo, not a Panipat survey**: no public street imagery exists for the city
+> (see Known limitations), so photos are placed along the OSM road geometry to exercise the
+> pipeline. Swap in real photos with `pothole ingest` and nothing else changes.
 
 - **Inner-lane coverage is the big unknown.** Crowdsourced imagery is dense on main roads and
   thin in narrow lanes. Run `pothole coverage` first: if a year has very low coverage, change
