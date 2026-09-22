@@ -152,7 +152,13 @@ disappeared where it was photographed again (`fixed`).
 - **Severity** is a rough proxy from box size, which depends on the camera.
 - **"Fixed"** means "not seen in newer imagery", which can also be a missed detection.
 - The default bounding box is approximate and includes some outskirts and farmland.
+## Dashboard
 
+![Streamlit dashboard](docs/dashboard.png)
+
+`streamlit run app/dashboard.py` turns the same database into an interactive view: move the
+baseline date, toggle new / persistent / fixed / unconfirmed, and read the counts for the
+selected period.
 ## Roadmap
 
 - [x] Geo utilities, coverage-aware comparison, coverage report, DB, Mapillary client, CLI,
