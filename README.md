@@ -154,7 +154,6 @@ disappeared where it was photographed again (`fixed`).
 - The default bounding box is approximate and includes some outskirts and farmland.
 ## Dashboard
 
-![Streamlit dashboard](docs/dashboard.png)
 
 `streamlit run app/dashboard.py` turns the same database into an interactive view: move the
 baseline date, toggle new / persistent / fixed / unconfirmed, and read the counts for the
