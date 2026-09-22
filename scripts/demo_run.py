@@ -30,7 +30,6 @@ from pothole.db import (  # noqa: E402
     all_image_points,
     connect,
     images_to_process,
-    insert_local_images,
     save_detections,
     set_image_path,
     upsert_images,
@@ -60,7 +59,13 @@ def bearing(a: tuple[float, float], b: tuple[float, float]) -> float:
 
 def find_pothole_photos() -> pathlib.Path:
     """RDD2022 India pothole images: local cache first, else kagglehub download."""
-    import kagglehub
+    try:
+        import kagglehub
+    except ImportError as exc:
+        raise SystemExit(
+            "Synthetic mode needs the public RDD2022 pothole images: run `pip install kagglehub` "
+            "once, or use --photos with your own geotagged photos."
+        ) from exc
 
     root = pathlib.Path(kagglehub.dataset_download(DATASET))
     for images in sorted(root.rglob("images")):
@@ -126,7 +131,13 @@ def synthetic_rows(cfg: dict, images_dir: pathlib.Path, per_pass: int, date1: st
     return rows
 
 def own_photo_rows(args, cfg: dict):
-    from pothole.ingest import collect_rows, read_csv
+    try:
+        from pothole.ingest import collect_rows, read_csv
+    except ImportError as exc:
+        raise SystemExit(
+            "This build has no `pothole.ingest` (an older release): that is only needed for "
+            "`--photos`. Run the synthetic demo instead (no --photos), or update the repo."
+        ) from exc
 
     csv_map = read_csv(args.csv) if args.csv else None
     rows, skipped = collect_rows(args.photos, csv_map)
@@ -158,7 +169,9 @@ def main() -> None:
 
     if args.photos:
         rows = own_photo_rows(args, cfg)
-        insert_local_images(conn, rows)
+        upsert_images(conn, rows)
+        for r in rows:
+            set_image_path(conn, r["id"], r["path"])
     else:
         rows = synthetic_rows(cfg, find_pothole_photos(), args.per_pass, args.date1, args.date2)
         upsert_images(conn, rows)
